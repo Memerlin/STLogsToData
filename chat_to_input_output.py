@@ -11,7 +11,7 @@ args = parser.parse_args()
 
 # Read logs line by line
 def get_chat(filename) -> Generator[dict, None, None]: 
-    with open(filename, 'r') as f:
+    with open(filename, 'r', encoding='utf-8') as f:
         for line in f:
             try:
                 yield json.loads(line)
