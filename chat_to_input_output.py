@@ -1,74 +1,46 @@
 import json
-import argparse
 from typing import Generator
 
-parser = argparse.ArgumentParser(description='Convert chat logs to input/output format')
+def main(args):
+    input_file = args.input
+    output_file = args.output
+    print(f'Reading chatlog at {input_file}')
 
-parser.add_argument('-i', '--input', type=str, help='The chatlog to convert', required=True)
-parser.add_argument('-o', '--output', type=str, help='The output file', required=True)
+    # Read logs line by line
 
-args = parser.parse_args()
+    def get_chat(input_file) -> Generator[dict, None, None]:
+        with open(input_file, 'r', encoding='utf-8') as f:
+            for line_number, line in enumerate(f, start=1):
+                try:
+                    if input_file.endswith('.jsonl'):
+                        yield json.loads(line)
+                except json.JSONDecodeError as e:
+                    print(f'Error reading this line: {line_number} in file {input_file}')
+                    print(f'Error message: {str(e)}')
+    log = list(get_chat(input_file))
 
-# Read logs line by line
-def get_chat(filename) -> Generator[dict, None, None]: 
-    with open(filename, 'r', encoding='utf-8') as f:
-        for line in f:
-            try:
-                yield json.loads(line)
-            except:
-                print('Error reading line: ' + line)
+    output = []
+    current_input = ''
+    current_output = ''
 
-# Function to check if Pair exists in training_data
-def pair_exists(pair, training_data):
-    return pair in training_data
+    for i in range(len(log)):
+        mes: str = log[i].get('mes', '') # String
+        if mes == '': # Skip empty messages
+            continue
+        if log[i].get('is_user'):
+            if current_input != '':
+                output.append({'input': current_input.strip(), 'output': current_output.strip()})
+                current_output = ''
+            current_input = mes + '\n'
+        else:
+            current_output += mes + '\n'
+    
+    # Append the last conversation if it exists after loop
+    if current_input != '' and current_output != '':
+        output.append({'input': current_input.strip(), 'output': current_output.strip()})
+    print(f'Writing {output_file}...')
 
-print('Reading chat log at ' + args.input)
-log = list(get_chat(args.input))
-
-output = []
-current_input = ''
-current_output = ''
-
-# Reading existing training data and store pairs in a set
-training_data_set = set()
-try:
-    with open(args.output, 'r', encoding='utf-8') as f:
-            for line in f:
-                pair = json.loads(line)
-                training_data_set.add((pair['input'], pair['output']))
-except FileNotFoundError:
-    print(f"No {args.output} file found, creating new file...")
-
-for i in range(len(log)):
-    mes: str = log[i].get('mes', '')  # string
-    if mes == '':  # Skip empty messages
-        continue
-
-    if log[i].get('is_user'):
-        if current_output != '':
-            pair = {'input': current_input.strip(), 'output': current_output.strip()}
-            if not pair_exists((pair['input'], pair['output']), training_data_set):
-                output.append(pair)
-            else:
-                print(f'Warning: Pair already exists - {pair["input"]}, {pair["output"]}')
-            current_output = ''
-        current_input = mes + '\n'
-    else:
-        current_output += mes + '\n'
-
-# Append the last conversation if it exists after the loop
-if current_input != '' and current_output != '':
-    pair = {'input': current_input.strip(), 'output': current_output.strip()}
-    if not pair_exists((pair['input'], pair['output']), training_data_set):
-        output.append(pair)
-    else:
-        print(f'Warning: Pair already exists - {pair["input"]}, {pair["output"]}')
-
-print('Writing output to ' + args.output)
-if output == []:
-    print(f'The data between "{args.input}" and "{args.output}" is already present')
-else:
-    with open(args.output, 'a') as f:
+    with open(output_file, 'a', encoding='utf-8') as f:
         for pair in output:
             f.write(json.dumps(pair) + '\n')
-    print(f'Output appended to {args.output}')
+        print(f'Output appended to {output_file}')
