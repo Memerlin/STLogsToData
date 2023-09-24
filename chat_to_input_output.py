@@ -43,4 +43,4 @@ def main(args):
     with open(output_file, 'a', encoding='utf-8') as f:
         for pair in output:
             f.write(json.dumps(pair) + '\n')
-        print(f'{output_file} has been written')
+        print(f'Output appended to {output_file}')
