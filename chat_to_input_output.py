@@ -12,10 +12,8 @@ def main(args):
         with open(input_file, 'r', encoding='utf-8') as f:
             for line_number, line in enumerate(f, start=1):
                 try:
-                    if input_file.endswith('.json'):
+                    if input_file.endswith('.jsonl'):
                         yield json.loads(line)
-                    else:
-                        break
                 except json.JSONDecodeError as e:
                     print(f'Error reading this line: {line_number} in file {input_file}')
                     print(f'Error message: {str(e)}')
